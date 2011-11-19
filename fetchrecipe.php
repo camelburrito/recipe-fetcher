@@ -1,24 +1,29 @@
 <?php
 ini_set('display_errors', 'On');
 error_reporting(E_ALL | E_STRICT);
+include('helpers.php');
 
-$q = strtolower($_GET["q"]);
-if (!$q) return;
+if (!array_key_exists('HTTP_X_REQUESTED_WITH', $_SERVER)) {
+    raise_not_found();
+}
+if (strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) != 'xmlhttprequest') {
+    raise_not_found();
+}
 
-$con = mysql_connect('127.0.0.1:3306', 'root', 'root');
-if (!$con)
-  {
-  die('Could not connect: ' . mysql_error());
-  }
+$q = filter_input(INPUT_GET, 'q', FILTER_SANITIZE_STRING);
+if (!$q) { echo json_encode(array("error" => "raise")); exit(); }
 
-mysql_select_db("rf", $con);
-
-$sql="SELECT * FROM ingredients_synonyms WHERE name LIKE '$q%'";
+$conn = get_mysql_conn();
+$sql="SELECT name FROM ingredients_synonyms WHERE name LIKE '$q%' LIMIT 10";
 
 $result = mysql_query($sql);
-$result_array = mysql_fetch_array($result);
-var_dump($result_array);
-mysql_close($con);
+$final_array = array();
+while ($row = mysql_fetch_array($result)) {
+    array_push($final_array, $row["name"]);
+}
+echo json_encode($final_array);
+mysql_free_result($result);
+mysql_close($conn);
 ?>
 
 
